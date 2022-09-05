@@ -2,7 +2,7 @@
 /**
  * Plausible Analytics | Helpers
  *
- * @since 1.0.0
+ * @since      1.0.0
  *
  * @package    WordPress
  * @subpackage Plausible Analytics
@@ -27,9 +27,8 @@ class Helpers {
 	 */
 	public static function get_domain() {
 		$site_url = site_url();
-		$domain   = preg_replace( '/^http(s?)\:\/\/(www\.)?/i', '', $site_url );
 
-		return $domain;
+		return preg_replace( '/^http(s?)\:\/\/(www\.)?/i', '', $site_url );
 	}
 
 	/**
@@ -41,13 +40,18 @@ class Helpers {
 	 * @return string
 	 */
 	public static function get_analytics_url() {
-		$settings         = self::get_settings();
-		$domain           = $settings['domain_name'];
-		$default_domain   = 'plausible.io';
-		$is_outbound_link = apply_filters( 'plausible_analytics_enable_outbound_links', true );
-		$file_name        = $is_outbound_link ? 'plausible.outbound-links' : 'plausible';
+		$settings       = self::get_settings();
+		$domain         = $settings['domain_name'];
+		$default_domain = 'plausible.io';
+		$file_name      = 'plausible';
 
-		// Triggered when self hosted analytics is enabled.
+		foreach ( [ 'outbound-links', 'file-downloads', 'compat', 'hash' ] as $extension ) {
+			if ( ! empty( $settings[ $extension ] ) && $settings[ $extension ][0] === '1' ) {
+				$file_name .= '.' . $extension;
+			}
+		}
+
+		// Triggered when self-hosted analytics is enabled.
 		if (
 			! empty( $settings['is_self_hosted_analytics'] ) &&
 			'true' === $settings['is_self_hosted_analytics']
@@ -66,7 +70,7 @@ class Helpers {
 			$url                  = "https://{$custom_domain_prefix}.{$domain}/js/{$file_name}.js";
 		}
 
-		return $url;
+		return esc_url( $url );
 	}
 
 	/**
@@ -81,7 +85,7 @@ class Helpers {
 		$settings = self::get_settings();
 		$domain   = $settings['domain_name'];
 
-		return "https://plausible.io/{$domain}";
+		return esc_url( "https://plausible.io/{$domain}" );
 	}
 
 	/**
@@ -96,10 +100,10 @@ class Helpers {
 	 */
 	public static function display_toggle_switch( $name ) {
 		$settings            = Helpers::get_settings();
-		$individual_settings = ! empty( $settings[ $name ] ) ? $settings[ $name ] : '';
+		$individual_settings = ! empty( $settings[ $name ] ) ? esc_html( $settings[ $name ] ) : '';
 		?>
 		<label class="plausible-analytics-switch">
-			<input <?php checked( $individual_settings, 'true' ); ?> class="plausible-analytics-switch-checkbox" name="plausible_analytics_settings[<?php echo $name; ?>]" value="1" type="checkbox" />
+			<input <?php checked( $individual_settings, 'true' ); ?> class="plausible-analytics-switch-checkbox" name="plausible_analytics_settings[<?php echo esc_attr( $name ); ?>]" value="1" type="checkbox"/>
 			<span class="plausible-analytics-switch-slider"></span>
 		</label>
 		<?php
@@ -114,7 +118,15 @@ class Helpers {
 	 * @return array
 	 */
 	public static function get_settings() {
-		return get_option( 'plausible_analytics_settings', [] );
+		$settings = get_option( 'plausible_analytics_settings', [] );
+
+		// Keep around for backwards compatibility reasons.
+		$track_outbound_links = apply_filters( 'plausible_analytics_enable_outbound_links', isset( $settings['outbound-links'][0] ) ? $settings['outbound-links'][0] : true );
+		if ( $track_outbound_links ) {
+			$settings['outbound-links'][0] = 1;
+		}
+
+		return $settings;
 	}
 
 	/**
@@ -148,7 +160,7 @@ class Helpers {
 			$url                  = "https://{$custom_domain_prefix}.{$domain}/api/event";
 		}
 
-		return $url;
+		return esc_url( $url );
 	}
 
 	/**
@@ -182,7 +194,7 @@ class Helpers {
 	 * @since  1.3.0
 	 * @access public
 	 *
-	 * @return mixed
+	 * @return string
 	 */
 	public static function render_quick_actions() {
 		ob_start();
@@ -230,13 +242,13 @@ class Helpers {
 	public static function clean( $var ) {
 		if ( is_array( $var ) ) {
 			return array_map( [ __CLASS__, __METHOD__ ], $var );
-		} else {
-			return is_scalar( $var ) ? sanitize_text_field( wp_unslash( $var ) ) : $var;
 		}
+
+		return is_scalar( $var ) ? sanitize_text_field( wp_unslash( $var ) ) : $var;
 	}
 
 	/**
-	 * Get user role for the loggedin user.
+	 * Get user role for the logged-in user.
 	 *
 	 * @since  1.3.0
 	 * @access public
@@ -247,8 +259,7 @@ class Helpers {
 		global $current_user;
 
 		$user_roles = $current_user->roles;
-		$user_role  = array_shift( $user_roles );
 
-		return $user_role;
+		return array_shift( $user_roles );
 	}
 }

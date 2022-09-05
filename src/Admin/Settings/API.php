@@ -30,16 +30,6 @@ class API {
 	public $fields = [];
 
 	/**
-	 * Constructor.
-	 *
-	 * @since  1.3.0
-	 * @access public
-	 *
-	 * @return void
-	 */
-	public function __construct() {}
-
-	/**
 	 * Render Fields.
 	 *
 	 * @since  1.3.0
@@ -63,8 +53,8 @@ class API {
 					<button
 						id="plausible-analytics-save-btn"
 						class="plausible-analytics-btn plausible-analytics-save-btn"
-						data-default-text="<?php esc_html_e( 'Save Changes', 'plausible-analytics' ); ?>"
-						data-saved-text="<?php esc_html_e( 'Saved!', 'plausible-analytics' ); ?>"
+						data-default-text="<?php esc_attr_e( 'Save Changes', 'plausible-analytics' ); ?>"
+						data-saved-text="<?php esc_attr_e( 'Saved!', 'plausible-analytics' ); ?>"
 					>
 						<span><?php esc_html_e( 'Save Changes', 'plausible-analytics' ); ?></span>
 						<span class="plausible-analytics-spinner">
@@ -86,16 +76,16 @@ class API {
 	 * @since  1.3.0
 	 * @access public
 	 *
-	 * @return mixed
+	 * @return string
 	 */
 	public function render_text_field( array $field ) {
 		ob_start();
 		$value = ! empty( $field['value'] ) ? $field['value'] : '';
 		?>
-		<label for="">
+		<label for="<?php echo $field['slug']; ?>">
 			<?php echo esc_attr( $field['label'] ); ?>
 		</label>
-		<input type="text" name="plausible_analytics_settings[<?php echo $field['slug']; ?>]" value="<?php echo $value; ?>" />
+		<input id="<?php echo $field['slug']; ?>" type="text" name="plausible_analytics_settings[<?php echo $field['slug']; ?>]" value="<?php echo $value; ?>" />
 		<?php
 		return ob_get_clean();
 	}
@@ -106,30 +96,29 @@ class API {
 	 * @since  1.3.0
 	 * @access public
 	 *
-	 * @return mixed
+	 * @return string
 	 */
 	public function render_group_field( array $group ) {
 		$settings    = Helpers::get_settings();
-		$toggle      = ! ! $group['toggle'];
+		$toggle      = $group['toggle'];
 		$fields      = $group['fields'];
 		$field_value = ! empty( $settings[ $group['slug'] ] ) ? $settings[ $group['slug'] ] : false;
 		$is_checked  = checked( $field_value, true, false );
-		$domain_name = ! empty( $settings['domain_name'] ) ? $settings['domain_name'] : '';
 		ob_start();
 		?>
 		<div class="plausible-analytics-admin-field">
 			<div class="plausible-analytics-admin-field-header">
 				<label for="">
-					<?php echo esc_attr( $group['label'] ); ?>
+					<?php echo $group['label']; ?>
 				</label>
-				<?php if ( $toggle ) { ?>
+				<?php if ( $toggle === true ) { ?>
 				<label class="plausible-analytics-switch">
 					<input <?php echo $is_checked; ?> class="plausible-analytics-switch-checkbox" name="plausible_analytics_settings[<?php echo $group['slug']; ?>]" value="1" type="checkbox">
 					<span class="plausible-analytics-switch-slider"></span>
 				</label>
-				<?php } else { ?>
-					<a target="_blank" class="plausible-analytics-link" href="https://plausible.io/<?php echo $domain_name; ?>">
-						<?php esc_html_e( 'Open Analytics', 'plausible-analytics' ); ?>
+				<?php } elseif ( is_array( $toggle ) ) { ?>
+					<a target="_blank" class="plausible-analytics-link" href="<?php echo $toggle['anchor']; ?>">
+						<?php echo $toggle['label']; ?>
 					</a>
 				<?php } ?>
 			</div>
@@ -137,13 +126,13 @@ class API {
 				<?php
 				if ( ! empty( $fields ) ) {
 					foreach ( $fields as $field ) {
-						echo call_user_func( [ $this, "render_{$field['type']}_field" ], $field );
+						echo call_user_func( [ $this, "render_{$field['type']}_field" ], $field ) . '<br/>';
 					}
 				}
 				?>
 			</div>
 			<div class="plausible-analytics-description">
-				<?php echo $group['desc']; // Already escaped earlier. ?>
+				<?php echo wp_kses_post( $group['desc'] ); ?>
 			</div>
 		</div>
 		<?php
@@ -156,7 +145,7 @@ class API {
 	 * @since  1.3.0
 	 * @access public
 	 *
-	 * @return mixed
+	 * @return string
 	 */
 	public function render_checkbox_field( array $field ) {
 		ob_start();
@@ -165,16 +154,20 @@ class API {
 		?>
 		<span class="plausible-checkbox-list">
 			<input
+				id="<?php echo $field['slug']; ?>"
 				type="checkbox"
-				name="plausible_analytics_settings[<?php echo $field['slug']; ?>][]"
-				value="<?php echo $value; ?>"
+				name="plausible_analytics_settings[<?php echo esc_attr( $field['slug'] ); ?>][]"
+				value="<?php echo esc_html( $value ); ?>"
 				<?php
 				! empty( $settings[ $field['slug'] ] ) ?
 					checked( in_array( $value, $settings[ $field['slug'] ], true ), true ) :
 					'';
 				?>
 			/>
-			<?php echo esc_attr( $field['label'] ); ?>
+			<label for="<?php echo $field['slug']; ?>"><?php echo $field['label']; ?></label>
+			<?php if ( ! empty( $field['docs'] ) ) { ?>
+				- <a href="<?php echo $field['docs']; ?>"><?php echo $field['docs_label']; ?></a>
+			<?php } ?>
 		</span>
 		<?php
 		return ob_get_clean();
